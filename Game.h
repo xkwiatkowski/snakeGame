@@ -14,6 +14,16 @@ private:
     void render();
 
     sf::RenderWindow window;
+
+    const int WINDOW_SIZE = 600;
+    const int GRID_SIZE = 20;
+    const int CELL_SIZE = WINDOW_SIZE / GRID_SIZE;
+
+    void drawGrid();
+    void drawSnake();
+
+    sf::Vector2i snakePosition;
+    sf::RectangleShape snakeBody;
 };
 
 #endif
