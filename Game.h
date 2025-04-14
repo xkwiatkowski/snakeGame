@@ -24,6 +24,11 @@ private:
 
     sf::Vector2i snakePosition;
     sf::RectangleShape snakeBody;
+    sf::Vector2i direction;
+    sf::Clock movementClock;
+    float moveDelay = 0.15f;
+
+    void handlePlayerInput(sf::Keyboard::Key key, bool isPressed);
 };
 
 #endif
