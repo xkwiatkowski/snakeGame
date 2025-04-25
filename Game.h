@@ -2,6 +2,7 @@
 #define GAME_H
 
 #include <SFML/Graphics.hpp>
+#include <deque>
 
 class Game {
 public:
@@ -22,13 +23,21 @@ private:
     void drawGrid();
     void drawSnake();
 
-    sf::Vector2i snakePosition;
+    std::deque<sf::Vector2i> snake;
+    int snakeLenght = 1;
+
     sf::RectangleShape snakeBody;
     sf::Vector2i direction;
     sf::Clock movementClock;
     float moveDelay = 0.15f;
 
     void handlePlayerInput(sf::Keyboard::Key key, bool isPressed);
+
+    sf::Vector2i applePosition;
+    sf::RectangleShape appleShape;
+
+    void spawnApple();
+    void drawApple();
 };
 
 #endif

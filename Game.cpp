@@ -1,10 +1,19 @@
 #include "Game.h"
+#include <cstdlib>
+#include <ctime>
 
-Game::Game() : window(sf::VideoMode(600, 600), "Snake Game") {
-    snakePosition = {GRID_SIZE / 2, GRID_SIZE / 2};
+Game::Game() : window(sf::VideoMode(600, 600), L"Snake Game") {
+    sf::Vector2i startPos = {GRID_SIZE / 2, GRID_SIZE / 2};
+    for(int i=0; i<snakeLenght; ++i){
+        snake.push_back({startPos.x - i, startPos.y});
+    }
     snakeBody.setSize(sf::Vector2f(CELL_SIZE, CELL_SIZE));
     snakeBody.setFillColor(sf::Color::Green);
     direction = {1, 0};
+
+    appleShape.setSize(sf::Vector2f(CELL_SIZE, CELL_SIZE));
+    appleShape.setFillColor(sf::Color::Red);
+    spawnApple();
 }
 
 void Game::run() {
@@ -28,7 +37,18 @@ void Game::processEvents() {
 
 void Game::update() {
     if(movementClock.getElapsedTime().asSeconds() >= moveDelay){
-        snakePosition += direction;
+        sf::Vector2i newHead = snake.front() + direction;
+        snake.push_front(newHead);
+
+        if(newHead == applePosition){
+            snakeLenght++;
+            spawnApple();
+        }
+
+        if(snake.size() > snakeLenght){
+            snake.pop_back();
+        }
+        
         movementClock.restart();
     }
 }
@@ -38,6 +58,7 @@ void Game::render() {
     
     drawGrid();
     drawSnake();
+    drawApple();
     
     window.display();
 }
@@ -59,8 +80,10 @@ void Game::drawGrid(){
 }
 
 void Game::drawSnake(){
-    snakeBody.setPosition(snakePosition.x * CELL_SIZE, snakePosition.y * CELL_SIZE);
-    window.draw(snakeBody);
+    for(const auto& segment : snake){
+        snakeBody.setPosition(segment.x * CELL_SIZE, segment.y * CELL_SIZE);
+        window.draw(snakeBody);
+    }
 }
 
 void Game::handlePlayerInput(sf::Keyboard::Key key, bool isPressed){
@@ -77,4 +100,31 @@ void Game::handlePlayerInput(sf::Keyboard::Key key, bool isPressed){
     } else if (key == sf::Keyboard::Right && direction.x != -1){
         direction = {1, 0};
     }
+}
+
+void Game::spawnApple(){
+    std::srand(std::time(nullptr));
+    while(true){
+        int x = std::rand() % GRID_SIZE;
+        int y = std::rand() % GRID_SIZE;
+        sf::Vector2i potentialPos = {x, y};
+
+        bool onSnake = false;
+        for(const auto& segment : snake){
+            if(segment == potentialPos){
+                onSnake = true;
+                break;
+            }
+        }
+
+        if(!onSnake){
+            applePosition = potentialPos;
+            break;
+        }
+    }
+}
+
+void Game::drawApple(){
+    appleShape.setPosition(applePosition.x * CELL_SIZE, applePosition.y * CELL_SIZE);
+    window.draw(appleShape);
 }
