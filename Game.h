@@ -38,6 +38,13 @@ private:
 
     void spawnApple();
     void drawApple();
+
+    const float TIME_PER_FRAME = 1.f / 10.f;
+
+    bool gameStarted = false;
+    bool gameOver = false;
+
+    void resetGame();
 };
 
 #endif
