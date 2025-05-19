@@ -45,6 +45,22 @@ private:
     bool gameOver = false;
 
     void resetGame();
+
+    sf::Font font;
+    sf::Text scoreText;
+    int score = 0;
+
+    void updateScoreText();
+
+    enum AppleType { NORMAL, GOLD, FAST };
+    AppleType currentAppleType = NORMAL;
+
+    const float DEFAULT_MOVE_DELAY = 0.15f;
+    sf::Clock fastEffectClock;
+    float fastModeUntil = 0.f;
+
+    sf::Clock appleTimer;
+    const float APPLE_LIFESPAN = 8.0f;
 };
 
 #endif
