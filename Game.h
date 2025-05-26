@@ -3,6 +3,15 @@
 
 #include <SFML/Graphics.hpp>
 #include <deque>
+#include <vector>
+
+enum AppleType { NORMAL, GOLD, FAST };
+
+struct Apple {
+    sf::Vector2i position;
+    AppleType type;
+    sf::Clock timer;
+};
 
 class Game {
 public:
@@ -22,45 +31,41 @@ private:
 
     void drawGrid();
     void drawSnake();
+    void drawObstacles();
+    void drawApples();
+    void spawnApple();
+    void spawnInitialApples();
+    void resetGame();
+    void handlePlayerInput(sf::Keyboard::Key key, bool isPressed);
 
     std::deque<sf::Vector2i> snake;
     int snakeLenght = 1;
-
-    sf::RectangleShape snakeBody;
     sf::Vector2i direction;
+    sf::RectangleShape snakeBody;
+
     sf::Clock movementClock;
-    float moveDelay = 0.15f;
-
-    void handlePlayerInput(sf::Keyboard::Key key, bool isPressed);
-
-    sf::Vector2i applePosition;
-    sf::RectangleShape appleShape;
-
-    void spawnApple();
-    void drawApple();
-
-    const float TIME_PER_FRAME = 1.f / 10.f;
+    float moveDelay = 0.1f;
+    const float DEFAULT_MOVE_DELAY = 0.1f;
 
     bool gameStarted = false;
     bool gameOver = false;
 
-    void resetGame();
-
+    int score = 0;
     sf::Font font;
     sf::Text scoreText;
-    int score = 0;
-
     void updateScoreText();
 
-    enum AppleType { NORMAL, GOLD, FAST };
-    AppleType currentAppleType = NORMAL;
+    sf::RectangleShape appleShape;
+    std::vector<Apple> apples;
+    const int MAX_APPLES = 3;
+    const float APPLE_LIFESPAN = 8.0f;
 
-    const float DEFAULT_MOVE_DELAY = 0.15f;
     sf::Clock fastEffectClock;
     float fastModeUntil = 0.f;
 
-    sf::Clock appleTimer;
-    const float APPLE_LIFESPAN = 8.0f;
+    std::vector<sf::Vector2i> obstacles;
+    int nextObstacleScore = 5;
+    void addRandomObstacle();
 };
 
 #endif

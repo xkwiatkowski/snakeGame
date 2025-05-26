@@ -3,7 +3,7 @@
 #include <ctime>
 #include <cmath>
 
-Game::Game() : window(sf::VideoMode(600, 600), L"Snake Game") {
+Game::Game() : window(sf::VideoMode(600, 600), L"Snake Game"){
     sf::Vector2i startPos = {GRID_SIZE / 2, GRID_SIZE / 2};
     for(int i=0; i<snakeLenght; ++i){
         snake.push_back({startPos.x - i, startPos.y});
@@ -18,28 +18,31 @@ Game::Game() : window(sf::VideoMode(600, 600), L"Snake Game") {
     appleShape.setSize(sf::Vector2f(CELL_SIZE, CELL_SIZE));
     appleShape.setFillColor(sf::Color::Red);
     spawnApple();
+
+    obstacles.push_back({5, 5});
+    obstacles.push_back({15, 15});
+
+    spawnInitialApples();
 }
 
-void Game::run() {
+void Game::run(){
     sf::Clock clock;
-    float accumulatedTime = 0.f;
 
     while (window.isOpen()) {
         processEvents();
 
         float deltaTime = clock.restart().asSeconds();
-        accumulatedTime += deltaTime;
 
-        while(accumulatedTime >= TIME_PER_FRAME){
+        while(movementClock.getElapsedTime().asSeconds() >= moveDelay){
             update();
-            accumulatedTime -= TIME_PER_FRAME;
+            movementClock.restart();
         }
 
         render();
     }
 }
 
-void Game::processEvents() {
+void Game::processEvents(){
     sf::Event event;
     while (window.pollEvent(event)) {
         if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
@@ -55,7 +58,7 @@ void Game::processEvents() {
     }
 }
 
-void Game::update() {
+void Game::update(){
     if(!gameStarted) return;
 
     if(fastEffectClock.getElapsedTime().asSeconds() > fastModeUntil){
@@ -76,26 +79,47 @@ void Game::update() {
         }
     }
 
-    if(newHead == applePosition){
-        snakeLenght++;
-        switch(currentAppleType){
-            case NORMAL:
-                score += 1;
-                break;
-            case GOLD:
-                score += 3;
-                break;
-            case FAST:
-                score += 1;
-                fastModeUntil = fastEffectClock.getElapsedTime().asSeconds() + 5.0f;
-                moveDelay = 0.03f;
-                break;
+    for(const auto& obs : obstacles){
+        if(newHead == obs){
+            gameOver = true;
+            return;
         }
-        spawnApple();
     }
 
-    if((currentAppleType == GOLD || currentAppleType == FAST) && appleTimer.getElapsedTime().asSeconds() > APPLE_LIFESPAN){
-        spawnApple();
+    for(size_t i=0; i < apples.size(); ++i){
+        if(newHead == apples[i].position){
+            snakeLenght++;
+
+            switch(apples[i].type){
+                case NORMAL:
+                    score += 1;
+                    break;
+                case GOLD:
+                    score += 3;
+                    break;
+                case FAST:
+                    score += 1;
+                    fastModeUntil = fastEffectClock.getElapsedTime().asSeconds() + 5.0f;
+                    moveDelay = 0.06f;
+                    break;
+            }
+
+            apples.erase(apples.begin() + i);
+            spawnApple();
+            break;
+        }
+    }
+
+    if(score >= nextObstacleScore){
+        addRandomObstacle();
+        nextObstacleScore += 5;
+    }
+
+    for(int i=apples.size() - 1; i >= 0; --i){
+        if((apples[i].type == GOLD || apples[i].type == FAST) && apples[i].timer.getElapsedTime().asSeconds() > APPLE_LIFESPAN){
+            apples.erase(apples.begin() + i);
+            spawnApple();
+        }
     }
 
     snake.push_front(newHead);
@@ -104,13 +128,15 @@ void Game::update() {
     }
 }
 
-void Game::render() {
+void Game::render(){
     bool fastActive = fastEffectClock.getElapsedTime().asSeconds() <= fastModeUntil;
     window.clear(fastActive ? sf::Color(20, 20, 40) : sf::Color::Black);
     
     drawGrid();
+    drawObstacles();
     drawSnake();
-    drawApple();
+    drawApples();
+
     for(int i=0; i<score; ++i){
         sf::CircleShape dot(5.f);
         dot.setPointCount(30);
@@ -176,92 +202,98 @@ void Game::handlePlayerInput(sf::Keyboard::Key key, bool isPressed){
     if(key == sf::Keyboard::Escape){
         window.close();
     } else if(!gameStarted and !gameOver){
-        if (key == sf::Keyboard::Up && direction.y != 1){
+        if(key == sf::Keyboard::Up && direction.y != 1){
             gameStarted = true;
             direction = {0, -1};
-        } else if (key == sf::Keyboard::Down && direction.y != -1){
+        } else if(key == sf::Keyboard::Down && direction.y != -1){
             gameStarted = true;
             direction = {0, 1};
-        } else if (key == sf::Keyboard::Left && direction.x != 1){
-            gameStarted = true;
+        } else if(key == sf::Keyboard::Left && direction.x != 1){
+            gameStarted = true;         
             direction = {-1, 0};
-        } else if (key == sf::Keyboard::Right && direction.x != -1){
-            gameStarted = true;
+        } else if(key == sf::Keyboard::Right && direction.x != -1){
+            gameStarted = true;         
             direction = {1, 0};
         }
+        for(auto& a : apples){
+            a.timer.restart();
+        }
     } else if(gameStarted && !gameOver){
-        if (key == sf::Keyboard::Up && direction.y != 1){
+        if(key == sf::Keyboard::Up && direction.y != 1){
             direction = {0, -1};
-        } else if (key == sf::Keyboard::Down && direction.y != -1){
+        } else if(key == sf::Keyboard::Down && direction.y != -1){
             direction = {0, 1};
-        } else if (key == sf::Keyboard::Left && direction.x != 1){
+        } else if(key == sf::Keyboard::Left && direction.x != 1){
             direction = {-1, 0};
-        } else if (key == sf::Keyboard::Right && direction.x != -1){
+        } else if(key == sf::Keyboard::Right && direction.x != -1){
             direction = {1, 0};
         }
     }
 }
 
 void Game::spawnApple(){
-    while(true){
+    for(int attempts=0; attempts < 100; ++attempts){
         int x = rand() % GRID_SIZE;
         int y = rand() % GRID_SIZE;
-        sf::Vector2i newPos(x, y);
-        bool onSnake = false;
+        sf::Vector2i pos(x, y);
+        bool conflict = false;
 
         for(const auto& segment : snake){
-            if(segment == newPos){
-                onSnake = true;
-                break;
+            if(segment == pos) conflict = true;
+        }
+        for(const auto& obs : obstacles){
+            if(obs == pos) conflict = true;
+        }
+        for(const auto& a : apples){
+            if(a.position == pos) conflict = true;
+        }
+
+        if(!conflict){
+            Apple newApple;
+            newApple.position = pos;
+
+            int roll = rand() % 100;
+            if(roll < 50){
+                newApple.type = NORMAL;
+            } else if(roll < 95){
+                newApple.type = GOLD;
+            } else{
+                newApple.type = FAST;
             }
-        }
-
-        if(!onSnake){
-            applePosition = newPos;
-            break;
+            newApple.timer.restart();
+            apples.push_back(newApple);
+            return;
         }
     }
-
-    int roll = rand() % 100;
-    if(roll < 80){
-        currentAppleType = NORMAL;
-    } else if(roll < 95){
-        currentAppleType = GOLD;
-    } else{
-        currentAppleType = FAST;
-    }
-
-    appleTimer.restart();
 }
 
-void Game::drawApple(){
-    float timeAlive = appleTimer.getElapsedTime().asSeconds();
-    float timeLeft = APPLE_LIFESPAN - timeAlive;
+void Game::drawApples(){
+    for(const auto& apple : apples){
+        float timeAlive = apple.timer.getElapsedTime().asSeconds();
+        float timeLeft = APPLE_LIFESPAN - timeAlive;
+        bool shouldDraw = true;
 
-    bool shouldDraw = true;
-
-    if((currentAppleType == GOLD || currentAppleType == FAST) && timeLeft < 2.0f){
-        float blinkCycle = std::fmod(timeAlive, 0.4f);
-        shouldDraw = blinkCycle < 0.2f;
+        if((apple.type == GOLD || apple.type == FAST) && timeLeft < 2.0f){
+            float blinkCycle = std::fmod(timeAlive, 0.4f);
+            if(blinkCycle >= 0.2f) continue;
+        }
+        
+        sf::RectangleShape rect(sf::Vector2f(CELL_SIZE, CELL_SIZE));
+        rect.setPosition(apple.position.x * CELL_SIZE, apple.position.y * CELL_SIZE);
+        
+        switch(apple.type){
+            case NORMAL:
+                rect.setFillColor(sf::Color::Red);
+                break;
+            case GOLD:
+                rect.setFillColor(sf::Color(255, 215, 0));
+                break;
+            case FAST:
+                rect.setFillColor(sf::Color::Cyan);
+                break;
+        }
+        window.draw(rect);
     }
-
-    if(!shouldDraw) return;
-
-    sf::RectangleShape apple(sf::Vector2f(CELL_SIZE, CELL_SIZE));
-    apple.setPosition(applePosition.x * CELL_SIZE, applePosition.y * CELL_SIZE);
-
-    switch(currentAppleType){
-        case NORMAL:
-            apple.setFillColor(sf::Color::Red);
-            break;
-        case GOLD:
-            apple.setFillColor(sf::Color(255, 215, 0));
-            break;
-        case FAST:
-            apple.setFillColor(sf::Color::Cyan);
-            break;
-    }
-    window.draw(apple);
 }
 
 void Game::resetGame(){
@@ -273,5 +305,47 @@ void Game::resetGame(){
     gameOver = false;
     gameStarted = false;
     score = 0;
-    spawnApple();
+    apples.clear();
+    spawnInitialApples();
+}
+
+void Game::drawObstacles(){
+    sf::RectangleShape block(sf::Vector2f(CELL_SIZE, CELL_SIZE));
+    block.setFillColor(sf::Color(128, 128, 128));
+
+    for(const auto& obs : obstacles){
+        block.setPosition(obs.x * CELL_SIZE, obs.y * CELL_SIZE);
+        window.draw(block);
+    }
+}
+
+void Game::addRandomObstacle(){
+    for(int attempts = 0; attempts < 100; ++attempts){
+        int x = rand() % GRID_SIZE;
+        int y = rand() % GRID_SIZE;
+        sf::Vector2i pos(x, y);
+        bool conflict = false;
+
+        for(const auto& segment : snake){
+            if(segment == pos) conflict = true;
+        }
+        for(const auto& obs : obstacles){
+            if(obs == pos) conflict = true;
+        }
+        for(const auto& a : apples){
+            if(a.position == pos) conflict = true;
+        }
+
+        if(!conflict){
+            obstacles.push_back(pos);
+            return;
+        }
+    }
+}
+
+void Game::spawnInitialApples(){
+    apples.clear();
+    for(int i=0; i < MAX_APPLES; ++i){
+        spawnApple();
+    }
 }
