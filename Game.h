@@ -5,6 +5,8 @@
 #include <deque>
 #include <vector>
 
+enum GameState { MENU, PLAYING, GAME_OVER };
+
 enum AppleType { NORMAL, GOLD, FAST };
 
 struct Apple {
@@ -29,6 +31,12 @@ private:
     const int GRID_SIZE = 20;
     const int CELL_SIZE = WINDOW_SIZE / GRID_SIZE;
 
+    GameState gameState = MENU;
+    sf::Clock startAnimationClock;
+    sf::Clock startDelayClock;
+    bool startDelayActive = false;
+    int countdownDots = 0;
+
     void drawGrid();
     void drawSnake();
     void drawObstacles();
@@ -51,9 +59,6 @@ private:
     bool gameOver = false;
 
     int score = 0;
-    sf::Font font;
-    sf::Text scoreText;
-    void updateScoreText();
 
     sf::RectangleShape appleShape;
     std::vector<Apple> apples;
@@ -66,6 +71,19 @@ private:
     std::vector<sf::Vector2i> obstacles;
     int nextObstacleScore = 5;
     void addRandomObstacle();
+    void spawnInitialObstacles();
+
+    sf::Clock deathPauseClock;
+    bool deathPauseActive = false;
+    const float DEATH_PAUSE_DURATION = 2.0f;
+
+    std::vector<sf::Vector2i> disintegratingSegments;
+    sf::Clock disintegrationClock;
+    const float SEGMENT_DISINTEGRATION_DELAY = 0.1f;
+
+    int applesNormal = 0;
+    int applesGold = 0;
+    int applesFast = 0;
 };
 
 #endif
